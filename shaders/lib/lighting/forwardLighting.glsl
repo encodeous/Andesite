@@ -18,26 +18,31 @@ void GetLighting(inout vec3 albedo, out vec3 shadow, vec3 viewPos, vec3 worldPos
     #endif
 
     #if defined OVERWORLD || defined END
-    // if (NoL > 0.0 || subsurface > 0.0) shadow = GetShadow(worldPos, NoL, subsurface, lightmap.y);
+    if (NoL > 0.0 || subsurface > 0.0) shadow = vec3(lightmap.y);
     shadow *= parallaxShadow;
     NoL = clamp(NoL * 1.01 - 0.01, 0.0, 1.0);
     
-    // float scattering = 0.0;
-    // if (subsurface > 0.0){
-    //     float VoL = clamp(dot(normalize(viewPos.xyz), lightVec), 0.0, 1.0);
-    //     scattering = pow16(VoL) * (1.0 - rainStrength) * subsurface;
-    //     NoL = mix(NoL, 1.0, sqrt(subsurface) * 0.75);
-    //     NoL = mix(NoL, 1.0, scattering);
-    // }
+    float scattering = 0.0;
+    if (subsurface > 0.0){
+        float VoL = clamp(dot(normalize(viewPos.xyz), lightVec), 0.0, 1.0);
+        scattering = pow16(VoL) * (1.0 - rainStrength) * subsurface;
+        NoL = mix(NoL, 1.0, sqrt(subsurface) * 0.75);
+        NoL = mix(NoL, 1.0, scattering);
+    }
     
     // vec3 fullShadow = vec3(0);
+    vec3 fullShadow = shadow * NoL;
     
     #ifdef OVERWORLD
-    vec3 sceneLighting = ambientCol * (4.0 - 3.0 * eBS) * pow6(lightmap.y);
+    float shadowMult = 0.1 * shadowFade;
+    // vec3 sceneLighting = ambientCol * (4.0 - 3.0 * eBS) * pow6(lightmap.y);
+    vec3 sceneLighting = mix(ambientCol, lightCol, fullShadow * shadowMult);
+    sceneLighting *= (4.0 - 3.0 * eBS) * pow6(lightmap.y) * (1.0 + scattering * shadow);
     #endif
 
     #ifdef END
-    vec3 sceneLighting = endCol.rgb * 0.02;
+    // vec3 sceneLighting = endCol.rgb * 0.02;
+    vec3 sceneLighting = endCol.rgb * (0.06 * fullShadow + 0.02);
     #endif
 
     #else
@@ -62,17 +67,30 @@ void GetLighting(inout vec3 albedo, out vec3 shadow, vec3 viewPos, vec3 worldPos
     vanillaDiffuse = mix(vanillaDiffuse, 1.0, lightFlatten);
     smoothLighting = mix(smoothLighting, 1.0, lightFlatten);
     
-    float nightVisionLighting = max(screenBrightness, 0.7) * 0.06;
+    //float nightVisionLighting = (screenBrightness - 0.5) * 0.05;
     
-    // #ifdef ALBEDO_BALANCING
-    // float albedoLength = length(albedo.rgb);
-    // albedoLength /= sqrt((albedoLength * albedoLength) * 0.25 * (1.0 - lightFlatten) + 1.0);
-    // albedo.rgb = albedoNormalized * albedoLength;
-    // #endif
+    #ifdef ALBEDO_BALANCING
+    float albedoLength = length(albedo.rgb);
+    albedoLength /= sqrt((albedoLength * albedoLength) * 0.25 * (1.0 - lightFlatten) + 1.0);
+    albedo.rgb = albedoNormalized * albedoLength;
+    #endif
 
     // //albedo = vec3(0.5);
-    albedo *= sceneLighting + blockLighting + emissiveLighting + nightVisionLighting + minLighting;
+    float tsBrightness = screenBrightness;
+    if(tsBrightness > 1.3){
+        minLighting += 0.01;
+        tsBrightness = 1.3;
+        #ifdef OVERWORLD
+        sceneLighting = ambientCol * (4.0 - 3.0 * eBS) * pow6(lightmap.y);
+        #endif
+        #ifdef END
+        sceneLighting = endCol.rgb * (1.02);
+        #endif
+    }
+
+    albedo *= sceneLighting + blockLighting + emissiveLighting + minLighting;
     albedo *= vanillaDiffuse * smoothLighting * smoothLighting;
+    albedo *= tsBrightness;
 
     #ifdef DESATURATION
     #ifdef OVERWORLD

@@ -43,54 +43,54 @@ float InterleavedGradientNoise() {
 	return fract(n + frameCounter / 8.0);
 }
 
-// vec3 SampleBasicShadow(vec3 shadowPos) {
-//     float shadow0 = shadow2D(shadowtex0, vec3(shadowPos.st, shadowPos.z)).x;
+vec3 SampleBasicShadow(vec3 shadowPos) {
+    float shadow0 = shadow2D(shadowtex0, vec3(shadowPos.st, shadowPos.z)).x;
 
-//     vec3 shadowCol = vec3(0.0);
-//     #ifdef SHADOW_COLOR
-//     if (shadow0 < 1.0) {
-//         shadowCol = texture2D(shadowcolor0, shadowPos.st).rgb *
-//                     shadow2D(shadowtex1, vec3(shadowPos.st, shadowPos.z)).x;
-//     }
-//     #endif
+    vec3 shadowCol = vec3(0.0);
+    // #ifdef SHADOW_COLOR
+    // if (shadow0 < 1.0) {
+    //     shadowCol = texture2D(shadowcolor0, shadowPos.st).rgb *
+    //                 shadow2D(shadowtex1, vec3(shadowPos.st, shadowPos.z)).x;
+    // }
+    // #endif
 
-//     return clamp(shadowCol * (1.0 - shadow0) + shadow0, vec3(0.0), vec3(1.0));
-// }
+    return vec3(1.0) * shadow0;
+}
 
-// vec3 SampleFilteredShadow(vec3 shadowPos, float offset, float biasStep) {
-//     float shadow0 = 0.0;
+vec3 SampleFilteredShadow(vec3 shadowPos, float offset, float biasStep) {
+    float shadow0 = 0.0;
 
-//     #if SSS_QUALITY == 1
-//     float sz = shadowPos.z;
-//     float dither = InterleavedGradientNoise();
-//     #endif
+    #if SSS_QUALITY == 1
+    float sz = shadowPos.z;
+    float dither = InterleavedGradientNoise();
+    #endif
     
-//     for (int i = 0; i < 16; i++) {
-//         vec2 shadowOffset = shadowOffsets[i] * offset;
-//         shadow0 += shadow2D(shadowtex0, vec3(shadowPos.st + shadowOffset, shadowPos.z)).x;
-//         #if SSS_QUALITY == 1
-//         if (biasStep > 0.0) shadowPos.z = sz - biasStep * GetCurvedBias(i, dither);
-//         #endif
-//     }
-//     shadow0 /= 16.0;
+    for (int i = 0; i < 16; i++) {
+        vec2 shadowOffset = shadowOffsets[i] * offset;
+        shadow0 += shadow2D(shadowtex0, vec3(shadowPos.st + shadowOffset, shadowPos.z)).x;
+        #if SSS_QUALITY == 1
+        if (biasStep > 0.0) shadowPos.z = sz - biasStep * GetCurvedBias(i, dither);
+        #endif
+    }
+    shadow0 /= 16.0;
 
-//     vec3 shadowCol = vec3(0.0);
-//     #ifdef SHADOW_COLOR
-//     if (shadow0 < 0.999) {
-//         for (int i = 0; i < 16; i++) {
-//             vec2 shadowOffset = shadowOffsets[i] * offset;
-//             shadowCol += texture2D(shadowcolor0, shadowPos.st + shadowOffset).rgb *
-//                          shadow2D(shadowtex1, vec3(shadowPos.st + shadowOffset, shadowPos.z)).x;
-//             #if SSS_QUALITY == 1
-//             if (biasStep > 0.0) shadowPos.z = sz - biasStep * GetCurvedBias(i, dither);
-//             #endif
-//         }
-//         shadowCol /= 16.0;
-//     }
-//     #endif
+    vec3 shadowCol = vec3(0.0);
+    #ifdef SHADOW_COLOR
+    if (shadow0 < 0.999) {
+        for (int i = 0; i < 16; i++) {
+            vec2 shadowOffset = shadowOffsets[i] * offset;
+            shadowCol += texture2D(shadowcolor0, shadowPos.st + shadowOffset).rgb *
+                         shadow2D(shadowtex1, vec3(shadowPos.st + shadowOffset, shadowPos.z)).x;
+            #if SSS_QUALITY == 1
+            if (biasStep > 0.0) shadowPos.z = sz - biasStep * GetCurvedBias(i, dither);
+            #endif
+        }
+        shadowCol /= 16.0;
+    }
+    #endif
 
-//     return clamp(shadowCol * (1.0 - shadow0) + shadow0, vec3(0.0), vec3(1.0));
-// }
+    return clamp(shadowCol * (1.0 - shadow0) + shadow0, vec3(0.0), vec3(1.0));
+}
 
 vec3 GetShadow(vec3 worldPos, float NoL, float subsurface, float skylight) {
     return vec3(skylight);
@@ -138,10 +138,10 @@ vec3 GetShadow(vec3 worldPos, float NoL, float subsurface, float skylight) {
     // shadowPos.z -= bias;
 
     // #ifdef SHADOW_FILTER
-    // vec3 shadow = SampleFilteredShadow(shadowPos, offset, biasStep);
+    // // vec3 shadow = SampleFilteredShadow(shadowPos, offset, biasStep);
     // #else
-    // vec3 shadow = SampleBasicShadow(shadowPos);
+    // // vec3 shadow = SampleBasicShadow(shadowPos);
     // #endif
 
-    // return shadow;
+    // return SampleBasicShadow(shadowPos);
 }
