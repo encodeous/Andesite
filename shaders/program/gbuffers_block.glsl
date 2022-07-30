@@ -142,7 +142,7 @@ void main() {
 	vec3 fresnel3 = vec3(0.0);
 	#endif
 
-	vec2 lightmap = clamp(lmCoord, vec2(0.0), vec2(1.0));
+	vec2 lightmap = clamp(lmCoord, vec2(0.9), vec2(1.0));
 
 	if(blockEntityId == 10402) albedo.a = 0.0;
 	float emission = float(blockEntityId == 10205);
